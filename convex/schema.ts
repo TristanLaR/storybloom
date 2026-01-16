@@ -1,14 +1,20 @@
+import { authTables } from "@convex-dev/auth/server";
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
-  // Users table (managed by Convex Auth)
+  // Auth tables from @convex-dev/auth
+  ...authTables,
+
+  // Users table (extended from auth)
   users: defineTable({
-    email: v.string(),
+    email: v.optional(v.string()),
+    emailVerificationTime: v.optional(v.number()),
     name: v.optional(v.string()),
+    image: v.optional(v.string()),
     avatarUrl: v.optional(v.string()),
     stripeCustomerId: v.optional(v.string()),
-    createdAt: v.number(),
+    createdAt: v.optional(v.number()),
   })
     .index("by_email", ["email"])
     .index("by_stripe", ["stripeCustomerId"]),
