@@ -2,15 +2,7 @@
 
 import { useWizard } from "./wizard-context";
 import { TitleStep } from "./steps/title-step";
-
-// Placeholder components for steps that will be implemented later
-function ThemeStep() {
-  return (
-    <div className="text-center text-gray-500">
-      Theme selection coming in Issue #10
-    </div>
-  );
-}
+import { ThemeStep } from "./steps/theme-step";
 
 function CharactersStep() {
   return (
