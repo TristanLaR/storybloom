@@ -3,14 +3,7 @@
 import { useWizard } from "./wizard-context";
 import { TitleStep } from "./steps/title-step";
 import { ThemeStep } from "./steps/theme-step";
-
-function CharactersStep() {
-  return (
-    <div className="text-center text-gray-500">
-      Character creation coming in Issue #11
-    </div>
-  );
-}
+import { CharactersStep } from "./steps/characters-step";
 
 function SettingStep() {
   return (
