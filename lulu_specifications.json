@@ -1,0 +1,478 @@
+{
+  "lulu_book_specifications": {
+    "version": "2025",
+    "minimum_page_counts": {
+      "paperback": 32,
+      "hardcover": 24,
+      "coil_bound": "varies",
+      "saddle_stitch": "varies"
+    },
+    "trim_sizes": [
+      {
+        "name": "Pocketbook",
+        "trim_size_inches": {"width": 4.25, "height": 6.875},
+        "trim_size_mm": {"width": 108, "height": 175},
+        "no_bleed_inches": {"width": 4.25, "height": 6.875},
+        "no_bleed_mm": {"width": 108, "height": 175},
+        "with_bleed_inches": {"width": 4.5, "height": 7.125},
+        "with_bleed_mm": {"width": 114, "height": 181}
+      },
+      {
+        "name": "Digest",
+        "trim_size_inches": {"width": 5.5, "height": 8.5},
+        "trim_size_mm": {"width": 140, "height": 216},
+        "no_bleed_inches": {"width": 5.5, "height": 8.5},
+        "no_bleed_mm": {"width": 140, "height": 216},
+        "with_bleed_inches": {"width": 5.75, "height": 8.75},
+        "with_bleed_mm": {"width": 146, "height": 222}
+      },
+      {
+        "name": "A5",
+        "trim_size_inches": {"width": 5.83, "height": 8.27},
+        "trim_size_mm": {"width": 148, "height": 210},
+        "no_bleed_inches": {"width": 5.83, "height": 8.27},
+        "no_bleed_mm": {"width": 148, "height": 210},
+        "with_bleed_inches": {"width": 6.08, "height": 8.52},
+        "with_bleed_mm": {"width": 154, "height": 216}
+      },
+      {
+        "name": "Royal",
+        "trim_size_inches": {"width": 6.14, "height": 9.21},
+        "trim_size_mm": {"width": 156, "height": 234},
+        "no_bleed_inches": {"width": 6.14, "height": 9.21},
+        "no_bleed_mm": {"width": 156, "height": 234},
+        "with_bleed_inches": {"width": 6.39, "height": 9.46},
+        "with_bleed_mm": {"width": 162, "height": 240}
+      },
+      {
+        "name": "US Trade",
+        "trim_size_inches": {"width": 6, "height": 9},
+        "trim_size_mm": {"width": 152, "height": 229},
+        "no_bleed_inches": {"width": 6, "height": 9},
+        "no_bleed_mm": {"width": 152, "height": 229},
+        "with_bleed_inches": {"width": 6.25, "height": 9.25},
+        "with_bleed_mm": {"width": 159, "height": 235}
+      },
+      {
+        "name": "Comic Book",
+        "trim_size_inches": {"width": 6.63, "height": 10.25},
+        "trim_size_mm": {"width": 168, "height": 260},
+        "no_bleed_inches": {"width": 6.63, "height": 10.25},
+        "no_bleed_mm": {"width": 168, "height": 260},
+        "with_bleed_inches": {"width": 6.88, "height": 10.5},
+        "with_bleed_mm": {"width": 175, "height": 267}
+      },
+      {
+        "name": "Executive",
+        "trim_size_inches": {"width": 7, "height": 10},
+        "trim_size_mm": {"width": 178, "height": 254},
+        "no_bleed_inches": {"width": 7, "height": 10},
+        "no_bleed_mm": {"width": 178, "height": 254},
+        "with_bleed_inches": {"width": 7.25, "height": 10.25},
+        "with_bleed_mm": {"width": 184, "height": 260}
+      },
+      {
+        "name": "Crown Quarto",
+        "trim_size_inches": {"width": 7.44, "height": 9.68},
+        "trim_size_mm": {"width": 189, "height": 246},
+        "no_bleed_inches": {"width": 7.44, "height": 9.68},
+        "no_bleed_mm": {"width": 189, "height": 246},
+        "with_bleed_inches": {"width": 7.69, "height": 9.93},
+        "with_bleed_mm": {"width": 195, "height": 252}
+      },
+      {
+        "name": "Small Square",
+        "trim_size_inches": {"width": 7.5, "height": 7.5},
+        "trim_size_mm": {"width": 191, "height": 191},
+        "no_bleed_inches": {"width": 7.5, "height": 7.5},
+        "no_bleed_mm": {"width": 191, "height": 191},
+        "with_bleed_inches": {"width": 7.75, "height": 7.75},
+        "with_bleed_mm": {"width": 197, "height": 197}
+      },
+      {
+        "name": "A4",
+        "trim_size_inches": {"width": 8.27, "height": 11.69},
+        "trim_size_mm": {"width": 210, "height": 297},
+        "no_bleed_inches": {"width": 8.27, "height": 11.69},
+        "no_bleed_mm": {"width": 210, "height": 297},
+        "with_bleed_inches": {"width": 8.52, "height": 11.94},
+        "with_bleed_mm": {"width": 216, "height": 303}
+      },
+      {
+        "name": "Square",
+        "trim_size_inches": {"width": 8.5, "height": 8.5},
+        "trim_size_mm": {"width": 216, "height": 216},
+        "no_bleed_inches": {"width": 8.5, "height": 8.5},
+        "no_bleed_mm": {"width": 216, "height": 216},
+        "with_bleed_inches": {"width": 8.75, "height": 8.75},
+        "with_bleed_mm": {"width": 222, "height": 222}
+      },
+      {
+        "name": "US Letter",
+        "trim_size_inches": {"width": 8.5, "height": 11},
+        "trim_size_mm": {"width": 216, "height": 279},
+        "no_bleed_inches": {"width": 8.5, "height": 11},
+        "no_bleed_mm": {"width": 216, "height": 279},
+        "with_bleed_inches": {"width": 8.75, "height": 11.25},
+        "with_bleed_mm": {"width": 222, "height": 286}
+      },
+      {
+        "name": "Small Landscape",
+        "trim_size_inches": {"width": 9, "height": 7},
+        "trim_size_mm": {"width": 229, "height": 178},
+        "no_bleed_inches": {"width": 9, "height": 7},
+        "no_bleed_mm": {"width": 229, "height": 178},
+        "with_bleed_inches": {"width": 9.25, "height": 7.25},
+        "with_bleed_mm": {"width": 235, "height": 184}
+      },
+      {
+        "name": "US Letter Landscape",
+        "trim_size_inches": {"width": 11, "height": 8.5},
+        "trim_size_mm": {"width": 279, "height": 216},
+        "no_bleed_inches": {"width": 11, "height": 8.5},
+        "no_bleed_mm": {"width": 279, "height": 216},
+        "with_bleed_inches": {"width": 11.25, "height": 8.75},
+        "with_bleed_mm": {"width": 286, "height": 222}
+      },
+      {
+        "name": "A4 Landscape",
+        "trim_size_inches": {"width": 11.69, "height": 8.27},
+        "trim_size_mm": {"width": 210, "height": 297},
+        "no_bleed_inches": {"width": 11.69, "height": 8.27},
+        "no_bleed_mm": {"width": 210, "height": 297},
+        "with_bleed_inches": {"width": 11.94, "height": 8.52},
+        "with_bleed_mm": {"width": 303, "height": 216}
+      },
+      {
+        "name": "Calendar",
+        "trim_size_inches": {"width": 11, "height": 8.5},
+        "trim_size_mm": {"width": 279, "height": 216},
+        "no_bleed_inches": {"width": 11, "height": 8.5},
+        "no_bleed_mm": {"width": 279, "height": 216},
+        "with_bleed_inches": {"width": 11.25, "height": 8.75},
+        "with_bleed_mm": {"width": 286, "height": 222}
+      }
+    ],
+    "paper_types": [
+      {
+        "name": "60# Uncoated White",
+        "best_for": ["novels", "nonfiction", "memoir", "text-heavy books"],
+        "description": "Ideal for projects with few or no graphics"
+      },
+      {
+        "name": "60# Uncoated Cream",
+        "best_for": ["novels", "nonfiction", "memoir", "text-heavy books"],
+        "description": "Warm tone paper ideal for text-heavy books"
+      },
+      {
+        "name": "80# Coated White",
+        "best_for": ["photo books", "high-quality images", "graphics"],
+        "description": "Premium paper for beautiful graphics and vibrant colors"
+      }
+    ],
+    "ink_options": [
+      {
+        "name": "Standard Black & White",
+        "best_for": ["text-only books", "novels", "memoirs"],
+        "description": "Standard quality black and white printing"
+      },
+      {
+        "name": "Premium Black & White",
+        "best_for": ["grayscale images", "high contrast"],
+        "description": "Higher quality for grayscale images and contrast"
+      },
+      {
+        "name": "Standard Color",
+        "best_for": ["colored fonts", "charts", "graphs", "small photos"],
+        "description": "Color printing without premium cost"
+      },
+      {
+        "name": "Premium Color",
+        "best_for": ["photo books", "high-resolution photos", "full bleed"],
+        "description": "Best for high-resolution photos and vibrant colors"
+      }
+    ],
+    "recommended_combinations": [
+      {
+        "use_case": "Novels, Memoirs, Text-Heavy",
+        "paper": "60# Uncoated White or Cream",
+        "ink": "Standard Black & White"
+      },
+      {
+        "use_case": "Grayscale Images, High Contrast",
+        "paper": "80# Coated White",
+        "ink": "Premium Black & White"
+      },
+      {
+        "use_case": "Color Elements (fonts, charts, graphs)",
+        "paper": "60# Uncoated White",
+        "ink": "Standard Color"
+      },
+      {
+        "use_case": "Photo Books, Full Bleed",
+        "paper": "80# Coated White",
+        "ink": "Premium Color"
+      }
+    ],
+    "margins": {
+      "bleed": {
+        "inches": 0.125,
+        "mm": 3.175,
+        "description": "Required on all sides when content extends to edge",
+        "when_required": "Graphics or content extends to page edge"
+      },
+      "safety": {
+        "inches": 0.5,
+        "mm": 12.7,
+        "description": "Keep text and important elements within this margin",
+        "from": "trim edge"
+      },
+      "trimming_tolerance": {
+        "inches": 0.125,
+        "mm": 3.175,
+        "direction": "toward front and back cover"
+      }
+    },
+    "gutter_margins": [
+      {
+        "page_count_min": 0,
+        "page_count_max": 60,
+        "add_inches": 0,
+        "add_mm": 0,
+        "recommended_total_inches": 0.5,
+        "recommended_total_mm": 13
+      },
+      {
+        "page_count_min": 61,
+        "page_count_max": 150,
+        "add_inches": 0.125,
+        "add_mm": 3,
+        "recommended_total_inches": 0.625,
+        "recommended_total_mm": 16
+      },
+      {
+        "page_count_min": 151,
+        "page_count_max": 400,
+        "add_inches": 0.5,
+        "add_mm": 13,
+        "recommended_total_inches": 1,
+        "recommended_total_mm": 25
+      },
+      {
+        "page_count_min": 401,
+        "page_count_max": 600,
+        "add_inches": 0.625,
+        "add_mm": 16,
+        "recommended_total_inches": 1.125,
+        "recommended_total_mm": 29
+      },
+      {
+        "page_count_min": 601,
+        "page_count_max": 9999,
+        "add_inches": 0.75,
+        "add_mm": 19,
+        "recommended_total_inches": 1.25,
+        "recommended_total_mm": 32
+      }
+    ],
+    "spine_width": {
+      "paperback": {
+        "formula_inches": "(page_count / 444) + 0.06",
+        "formula_mm": "(page_count / 17.48) + 1.524",
+        "calculation_type": "formula"
+      },
+      "hardcover": {
+        "calculation_type": "lookup_table",
+        "table": [
+          {"page_count_min": 0, "page_count_max": 23, "spine_inches": null, "spine_mm": null, "note": "Not available"},
+          {"page_count_min": 24, "page_count_max": 84, "spine_inches": 0.25, "spine_mm": 6},
+          {"page_count_min": 85, "page_count_max": 140, "spine_inches": 0.5, "spine_mm": 13},
+          {"page_count_min": 141, "page_count_max": 168, "spine_inches": 0.625, "spine_mm": 16},
+          {"page_count_min": 169, "page_count_max": 194, "spine_inches": 0.688, "spine_mm": 17},
+          {"page_count_min": 195, "page_count_max": 222, "spine_inches": 0.75, "spine_mm": 19},
+          {"page_count_min": 223, "page_count_max": 250, "spine_inches": 0.813, "spine_mm": 21},
+          {"page_count_min": 251, "page_count_max": 278, "spine_inches": 0.875, "spine_mm": 22},
+          {"page_count_min": 279, "page_count_max": 306, "spine_inches": 0.938, "spine_mm": 24},
+          {"page_count_min": 307, "page_count_max": 334, "spine_inches": 1, "spine_mm": 25},
+          {"page_count_min": 335, "page_count_max": 360, "spine_inches": 1.063, "spine_mm": 27},
+          {"page_count_min": 361, "page_count_max": 388, "spine_inches": 1.125, "spine_mm": 29},
+          {"page_count_min": 389, "page_count_max": 416, "spine_inches": 1.188, "spine_mm": 30},
+          {"page_count_min": 417, "page_count_max": 444, "spine_inches": 1.25, "spine_mm": 32},
+          {"page_count_min": 445, "page_count_max": 472, "spine_inches": 1.313, "spine_mm": 33},
+          {"page_count_min": 473, "page_count_max": 500, "spine_inches": 1.375, "spine_mm": 35},
+          {"page_count_min": 501, "page_count_max": 528, "spine_inches": 1.438, "spine_mm": 37},
+          {"page_count_min": 529, "page_count_max": 556, "spine_inches": 1.5, "spine_mm": 38},
+          {"page_count_min": 557, "page_count_max": 582, "spine_inches": 1.563, "spine_mm": 40},
+          {"page_count_min": 583, "page_count_max": 610, "spine_inches": 1.625, "spine_mm": 41},
+          {"page_count_min": 611, "page_count_max": 638, "spine_inches": 1.688, "spine_mm": 43},
+          {"page_count_min": 639, "page_count_max": 666, "spine_inches": 1.75, "spine_mm": 44},
+          {"page_count_min": 667, "page_count_max": 694, "spine_inches": 1.813, "spine_mm": 46},
+          {"page_count_min": 695, "page_count_max": 722, "spine_inches": 1.875, "spine_mm": 48},
+          {"page_count_min": 723, "page_count_max": 750, "spine_inches": 1.938, "spine_mm": 49},
+          {"page_count_min": 751, "page_count_max": 778, "spine_inches": 2, "spine_mm": 51},
+          {"page_count_min": 779, "page_count_max": 799, "spine_inches": 2.063, "spine_mm": 52},
+          {"page_count_min": 800, "page_count_max": 9999, "spine_inches": 2.125, "spine_mm": 54}
+        ]
+      },
+      "spine_text_guidelines": {
+        "no_spine_text_threshold": 80,
+        "minimum_margin_from_edge_inches": 0.125,
+        "minimum_margin_from_edge_mm": 3.175,
+        "recommendations": [
+          "For books 80 pages or fewer, do NOT include spine text",
+          "Leave at least 0.125 in (3.175 mm) between spine text and edge",
+          "Keep spine same color/graphic as rest of cover",
+          "If spine differs in color, wrap that color onto front/back covers"
+        ]
+      }
+    },
+    "color_space": {
+      "rgb": {
+        "profile": "sRGB IEC61966-2.1",
+        "description": "Additive color process for screens",
+        "recommendation": "Use for new documents"
+      },
+      "cmyk": {
+        "profile": "Coated GRACoL 2006",
+        "description": "Subtractive color process for printing",
+        "recommendation": "Only if already in CMYK - don't convert from RGB"
+      },
+      "guidelines": [
+        "Set up document as RGB file if starting from scratch",
+        "Use sRGB color space for RGB images",
+        "If in CMYK, keep it in CMYK (don't switch back)",
+        "Solid blacks print at 100% with no other colors",
+        "Total Area Coverage (TAC) should not exceed 270%",
+        "Avoid light colors (20% or less) - difficult to control",
+        "Black & white images should use grayscale color space",
+        "Grayscale gamma value should be between 2.2 and 2.4",
+        "Use Premium Color + 80# White for heavy ink coverage"
+      ]
+    },
+    "image_resolution": {
+      "ideal": {
+        "ppi": 300,
+        "use": "Complex or detailed graphics for print"
+      },
+      "minimum": {
+        "ppi": 150,
+        "use": "Simple graphics for print"
+      },
+      "digital_only": {
+        "ppi": 72,
+        "use": "Screen display only - not suitable for print"
+      },
+      "maximum": {
+        "ppi": 600,
+        "note": "Don't exceed this resolution"
+      }
+    },
+    "file_specifications": {
+      "interior": {
+        "format": "PDF",
+        "layout": "single page, portrait oriented",
+        "content": "All interior elements including title, copyright, blank pages",
+        "fonts": "All fonts must be embedded",
+        "images": {
+          "min_ppi": 300,
+          "max_ppi": 600,
+          "vectors": "Must be rasterized"
+        },
+        "layers": "Transparent layers and vector objects must be flattened",
+        "margins": {
+          "safety_min_inches": 0.5,
+          "safety_min_mm": 12.7,
+          "gutter_min_inches": 0.2,
+          "gutter_min_mm": 2.08
+        },
+        "prohibited": [
+          "Trim, bleed, or margin lines visible in PDF",
+          "Security/password protection"
+        ]
+      },
+      "cover": {
+        "format": "PDF",
+        "layout": "single page integrated spread (back, spine, front)",
+        "fonts": "All fonts must be embedded",
+        "images": {
+          "min_ppi": 300,
+          "max_ppi": 600,
+          "vectors": "Must be rasterized"
+        },
+        "layers": "Transparent layers and vector objects must be flattened",
+        "margins": {
+          "bleed_inches": 0.125,
+          "bleed_mm": 3.175,
+          "safety_inches": 0.5,
+          "safety_mm": 12.7
+        },
+        "spine": "See spine_width calculation",
+        "prohibited": [
+          "Trim, bleed, or margin lines visible in PDF",
+          "Security/password protection"
+        ]
+      }
+    },
+    "software_recommendations": {
+      "simple_projects": {
+        "name": "Microsoft Word",
+        "best_for": ["novels", "memoirs", "poetry"]
+      },
+      "complex_projects": {
+        "name": "Adobe InDesign",
+        "best_for": ["photo books", "workbooks", "textbooks"]
+      },
+      "cover_design": {
+        "name": "Adobe Photoshop",
+        "best_for": ["cover design", "image manipulation"]
+      },
+      "alternatives": {
+        "name": "Affinity Publisher",
+        "best_for": ["alternative to InDesign"]
+      }
+    },
+    "best_practices": {
+      "text_and_styling": [
+        "Use Styles for consistent formatting",
+        "Use Page Breaks to control content placement",
+        "Avoid inline formatting (hard returns, paragraph breaks)"
+      ],
+      "cover_design": [
+        "Extend graphics to bleed edge (0.125 in past trim)",
+        "Keep text within safety margin (0.5 in from edge)",
+        "Leave space around spine text for variance",
+        "Wrap spine color onto front/back if spine differs"
+      ],
+      "proofing": [
+        "Download and review print-ready files before publishing",
+        "Order a single proof copy",
+        "Check for typos and formatting issues",
+        "Verify image quality and resolution",
+        "Check spine alignment and margins"
+      ]
+    },
+    "validation_rules": {
+      "interior": {
+        "file_format": "Must be PDF",
+        "page_orientation": "Must be portrait (except landscape formats)",
+        "font_embedding": "Required",
+        "image_resolution_min": 300,
+        "image_resolution_max": 600,
+        "security": "Must not be password protected",
+        "page_count_min_paperback": 32,
+        "page_count_min_hardcover": 24
+      },
+      "cover": {
+        "file_format": "Must be PDF",
+        "layout": "Must be single spread",
+        "font_embedding": "Required",
+        "image_resolution_min": 300,
+        "image_resolution_max": 600,
+        "bleed_required": true,
+        "bleed_amount_inches": 0.125,
+        "bleed_amount_mm": 3.175,
+        "security": "Must not be password protected"
+      }
+    }
+  }
+}
