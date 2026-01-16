@@ -4,22 +4,8 @@ import { useWizard } from "./wizard-context";
 import { TitleStep } from "./steps/title-step";
 import { ThemeStep } from "./steps/theme-step";
 import { CharactersStep } from "./steps/characters-step";
-
-function SettingStep() {
-  return (
-    <div className="text-center text-gray-500">
-      Setting selection coming in Issue #12
-    </div>
-  );
-}
-
-function StyleStep() {
-  return (
-    <div className="text-center text-gray-500">
-      Art style selection coming in Issue #12
-    </div>
-  );
-}
+import { SettingStep } from "./steps/setting-step";
+import { StyleStep } from "./steps/style-step";
 
 function ReviewStep() {
   const { data } = useWizard();
