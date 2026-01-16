@@ -79,7 +79,7 @@ export default defineSchema({
     bookId: v.id("books"),
     name: v.string(),
     role: v.union(v.literal("main"), v.literal("supporting")),
-    referenceImageId: v.id("_storage"),
+    referenceImageId: v.optional(v.id("_storage")),
     description: v.string(),
     relationship: v.optional(v.string()),
     aiStylePrompt: v.optional(v.string()),

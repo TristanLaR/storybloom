@@ -122,3 +122,84 @@ export const deleteBook = mutation({
     await ctx.db.delete(args.bookId);
   },
 });
+
+// Combined mutation to create a book with all its characters
+export const createBookWithCharacters = mutation({
+  args: {
+    userId: v.id("users"),
+    title: v.string(),
+    theme: v.string(),
+    themeCategory: v.optional(
+      v.union(
+        v.literal("adventure"),
+        v.literal("friendship"),
+        v.literal("family"),
+        v.literal("learning"),
+        v.literal("bedtime"),
+        v.literal("custom")
+      )
+    ),
+    artStyle: v.union(
+      v.literal("watercolor"),
+      v.literal("cartoon"),
+      v.literal("classic"),
+      v.literal("whimsical"),
+      v.literal("pastel"),
+      v.literal("bold")
+    ),
+    setting: v.object({
+      primary: v.string(),
+      timeOfDay: v.optional(v.string()),
+      season: v.optional(v.string()),
+      additionalNotes: v.optional(v.string()),
+    }),
+    mood: v.union(
+      v.literal("lighthearted"),
+      v.literal("gentle"),
+      v.literal("exciting"),
+      v.literal("educational")
+    ),
+    authorName: v.optional(v.string()),
+    characters: v.array(
+      v.object({
+        name: v.string(),
+        role: v.union(v.literal("main"), v.literal("supporting")),
+        description: v.string(),
+        relationship: v.optional(v.string()),
+        referenceImageId: v.optional(v.id("_storage")),
+      })
+    ),
+  },
+  handler: async (ctx, args) => {
+    const { characters, ...bookData } = args;
+    const now = Date.now();
+
+    // Create the book
+    const bookId = await ctx.db.insert("books", {
+      ...bookData,
+      status: "setup",
+      generationCreditsUsed: 0,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // Create all characters
+    const characterIds = [];
+    for (let i = 0; i < characters.length; i++) {
+      const character = characters[i];
+      const characterId = await ctx.db.insert("characters", {
+        bookId,
+        name: character.name,
+        role: character.role,
+        description: character.description,
+        relationship: character.relationship,
+        referenceImageId: character.referenceImageId,
+        order: i,
+        createdAt: now,
+      });
+      characterIds.push(characterId);
+    }
+
+    return { bookId, characterIds };
+  },
+});
