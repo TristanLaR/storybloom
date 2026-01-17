@@ -136,6 +136,76 @@ export const deleteBook = mutation({
   },
 });
 
+export const duplicateBook = mutation({
+  args: { bookId: v.id("books") },
+  handler: async (ctx, args) => {
+    const book = await ctx.db.get(args.bookId);
+    if (!book) throw new Error("Book not found");
+
+    const now = Date.now();
+
+    // Create a copy of the book
+    const newBookId = await ctx.db.insert("books", {
+      userId: book.userId,
+      title: `${book.title} (Copy)`,
+      theme: book.theme,
+      themeCategory: book.themeCategory,
+      artStyle: book.artStyle,
+      setting: book.setting,
+      mood: book.mood,
+      authorName: book.authorName,
+      coverPrompt: book.coverPrompt,
+      coverImageId: book.coverImageId,
+      status: "draft", // Reset to draft status
+      generationCreditsUsed: 0,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // Copy characters
+    const characters = await ctx.db
+      .query("characters")
+      .withIndex("by_book", (q: any) => q.eq("bookId", args.bookId))
+      .collect();
+
+    for (const character of characters) {
+      await ctx.db.insert("characters", {
+        bookId: newBookId,
+        name: character.name,
+        role: character.role,
+        description: character.description,
+        relationship: character.relationship,
+        referenceImageId: character.referenceImageId,
+        generatedImageId: character.generatedImageId,
+        order: character.order,
+        createdAt: now,
+      });
+    }
+
+    // Copy pages
+    const pages = await ctx.db
+      .query("pages")
+      .withIndex("by_book", (q: any) => q.eq("bookId", args.bookId))
+      .collect();
+
+    for (const page of pages) {
+      await ctx.db.insert("pages", {
+        bookId: newBookId,
+        order: page.order,
+        storyText: page.storyText,
+        imagePrompt: page.imagePrompt,
+        imageId: page.imageId,
+        textPosition: page.textPosition,
+        textStyle: page.textStyle,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
+    return newBookId;
+  },
+});
+
 // Combined mutation to create a book with all its characters
 export const createBookWithCharacters = mutation({
   args: {
