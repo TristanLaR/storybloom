@@ -10,6 +10,11 @@ import {
   PRINT_DIMENSIONS,
   type CharacterReference,
 } from "./nanoBanana";
+import {
+  moderateContent,
+  quickModerationCheck,
+  type ContentToModerate,
+} from "../moderation/contentFilter";
 
 export const generateStory = action({
   args: {
@@ -34,6 +39,22 @@ export const generateStory = action({
     }),
   },
   handler: async (ctx, args) => {
+    // Content moderation check before generation
+    const contentToModerate: ContentToModerate = {
+      title: args.title,
+      theme: args.theme,
+      settingDescription: args.setting.primary,
+      characterNames: args.characters.map((c) => c.name),
+      characterDescriptions: args.characters.map((c) => c.description),
+    };
+
+    const moderationResult = moderateContent(contentToModerate);
+    if (!moderationResult.isApproved) {
+      throw new Error(
+        `Content moderation failed: ${moderationResult.message || "Content contains inappropriate material"}`
+      );
+    }
+
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       throw new Error("GEMINI_API_KEY environment variable is not set");
@@ -68,6 +89,24 @@ export const generateImage = action({
     height: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    // Content moderation check for image prompt
+    const promptCheck = quickModerationCheck(args.prompt);
+    if (!promptCheck.isClean) {
+      throw new Error(
+        `Image prompt moderation failed: ${promptCheck.reason || "Content contains inappropriate material"}`
+      );
+    }
+
+    // Also check character descriptions
+    for (const char of args.characters) {
+      const charCheck = quickModerationCheck(char.description);
+      if (!charCheck.isClean) {
+        throw new Error(
+          `Character description moderation failed: ${charCheck.reason || "Content contains inappropriate material"}`
+        );
+      }
+    }
+
     const apiKey = process.env.NANO_BANANA_API_KEY;
     if (!apiKey) {
       throw new Error("NANO_BANANA_API_KEY environment variable is not set");
@@ -121,6 +160,21 @@ export const generateBookCover = action({
     authorName: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    // Content moderation check for cover prompt
+    const promptCheck = quickModerationCheck(args.prompt);
+    if (!promptCheck.isClean) {
+      throw new Error(
+        `Cover prompt moderation failed: ${promptCheck.reason || "Content contains inappropriate material"}`
+      );
+    }
+
+    const titleCheck = quickModerationCheck(args.title);
+    if (!titleCheck.isClean) {
+      throw new Error(
+        `Title moderation failed: ${titleCheck.reason || "Content contains inappropriate material"}`
+      );
+    }
+
     const apiKey = process.env.NANO_BANANA_API_KEY;
     if (!apiKey) {
       throw new Error("NANO_BANANA_API_KEY environment variable is not set");

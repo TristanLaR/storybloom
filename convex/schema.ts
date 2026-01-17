@@ -204,4 +204,38 @@ export default defineSchema({
   })
     .index("by_book", ["bookId"])
     .index("by_status", ["status"]),
+
+  // Content moderation flags table
+  moderationFlags: defineTable({
+    bookId: v.optional(v.id("books")),
+    userId: v.id("users"),
+    contentType: v.union(
+      v.literal("book_setup"),
+      v.literal("character"),
+      v.literal("story_text"),
+      v.literal("image_prompt"),
+      v.literal("generated_content")
+    ),
+    flaggedContent: v.string(),
+    flaggedItems: v.array(v.string()),
+    severity: v.union(
+      v.literal("low"),
+      v.literal("medium"),
+      v.literal("high")
+    ),
+    status: v.union(
+      v.literal("pending_review"),
+      v.literal("approved"),
+      v.literal("rejected"),
+      v.literal("auto_blocked")
+    ),
+    reviewedBy: v.optional(v.string()),
+    reviewedAt: v.optional(v.number()),
+    reviewNotes: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_book", ["bookId"])
+    .index("by_user", ["userId"])
+    .index("by_status", ["status"])
+    .index("by_severity", ["severity"]),
 });
