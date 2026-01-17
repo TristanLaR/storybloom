@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { InlineTextEditor } from "@/components/editor/InlineTextEditor";
 import { ImageRegenerator } from "@/components/editor/ImageRegenerator";
+import { PageThumbnailGrid } from "@/components/editor/DraggableThumbnail";
 
 // Mock page data for development
 interface BookPage {
@@ -54,43 +55,6 @@ const createMockPages = (): BookPage[] => Array.from({ length: 24 }, (_, i) => (
   imageGenerationCount: 0,
   fontSize: 14,
 }));
-
-function PageThumbnail({
-  page,
-  isSelected,
-  onClick,
-}: {
-  page: BookPage;
-  isSelected: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        "relative aspect-square rounded-lg overflow-hidden border-2 transition-all",
-        isSelected
-          ? "border-primary-500 ring-2 ring-primary-200"
-          : "border-gray-200 hover:border-gray-300"
-      )}
-    >
-      <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
-        {page.imageUrl ? (
-          <img
-            src={page.imageUrl}
-            alt={`Page ${page.pageNumber}`}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div className="text-gray-400 text-xs">No image</div>
-        )}
-      </div>
-      <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs py-1 px-2">
-        {page.pageNumber}
-      </div>
-    </button>
-  );
-}
 
 function PagePreview({
   page,
@@ -310,6 +274,36 @@ export default function BookEditorPage({
     [selectedPageIndex, selectedPage, updatePage]
   );
 
+  const handleReorder = useCallback(
+    (fromIndex: number, toIndex: number) => {
+      // In real implementation, call Convex mutation:
+      // await reorderPages({ bookId, fromIndex, toIndex });
+      setPages((prevPages) => {
+        const newPages = [...prevPages];
+        const [movedPage] = newPages.splice(fromIndex, 1);
+        newPages.splice(toIndex, 0, movedPage);
+
+        // Update page numbers
+        return newPages.map((page, index) => ({
+          ...page,
+          pageNumber: index + 1,
+        }));
+      });
+
+      // Adjust selection if needed
+      if (selectedPageIndex === fromIndex) {
+        setSelectedPageIndex(toIndex);
+      } else if (fromIndex < selectedPageIndex && toIndex >= selectedPageIndex) {
+        setSelectedPageIndex(selectedPageIndex - 1);
+      } else if (fromIndex > selectedPageIndex && toIndex <= selectedPageIndex) {
+        setSelectedPageIndex(selectedPageIndex + 1);
+      }
+
+      console.log("Reordered page from", fromIndex, "to", toIndex);
+    },
+    [selectedPageIndex]
+  );
+
   const handlePrevPage = () => {
     const step = viewMode === "spread" ? 2 : 1;
     setSelectedPageIndex((prev) => Math.max(0, prev - step));
@@ -351,15 +345,13 @@ export default function BookEditorPage({
       <div className="flex-1 flex overflow-hidden mt-4 gap-4">
         {/* Thumbnail Sidebar */}
         {showThumbnails && (
-          <div className="w-24 lg:w-32 flex-shrink-0 overflow-y-auto pr-2 space-y-2">
-            {pages.map((page, index) => (
-              <PageThumbnail
-                key={page._id}
-                page={page}
-                isSelected={index === selectedPageIndex}
-                onClick={() => setSelectedPageIndex(index)}
-              />
-            ))}
+          <div className="w-24 lg:w-32 flex-shrink-0 overflow-y-auto pr-2">
+            <PageThumbnailGrid
+              pages={pages}
+              selectedPageIndex={selectedPageIndex}
+              onSelectPage={setSelectedPageIndex}
+              onReorder={handleReorder}
+            />
           </div>
         )}
 
