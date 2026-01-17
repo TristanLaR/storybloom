@@ -36,3 +36,13 @@ export const getBookOrders = query({
       .collect();
   },
 });
+
+export const getOrderByLuluId = internalQuery({
+  args: { luluOrderId: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("orders")
+      .withIndex("by_lulu_order", (q: any) => q.eq("luluOrderId", args.luluOrderId))
+      .collect();
+  },
+});
