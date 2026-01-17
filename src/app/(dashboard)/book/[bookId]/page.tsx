@@ -1,12 +1,14 @@
 "use client";
 
-import { use, useState, useCallback } from "react";
+import { use, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { InlineTextEditor } from "@/components/editor/InlineTextEditor";
 import { ImageRegenerator } from "@/components/editor/ImageRegenerator";
 import { PageThumbnailGrid } from "@/components/editor/DraggableThumbnail";
+import { useAutoSave } from "@/hooks/useAutoSave";
+import { SaveStatusIndicator } from "@/components/editor/SaveStatusIndicator";
 
 // Mock page data for development
 interface BookPage {
@@ -196,7 +198,6 @@ export default function BookEditorPage({
 
   const book = mockBook;
   const [pages, setPages] = useState<BookPage[]>(() => createMockPages());
-  const [isSaving, setIsSaving] = useState(false);
 
   const [selectedPageIndex, setSelectedPageIndex] = useState(0);
   const [viewMode, setViewMode] = useState<"single" | "spread">("single");
@@ -206,6 +207,40 @@ export default function BookEditorPage({
   const selectedPage = pages[selectedPageIndex];
   const leftPage = viewMode === "spread" ? pages[selectedPageIndex] : null;
   const rightPage = viewMode === "spread" ? pages[selectedPageIndex + 1] : null;
+
+  // Memoize the current page data for auto-save
+  const currentPageData = useMemo(
+    () => ({
+      pageId: selectedPage._id,
+      textContent: selectedPage.textContent,
+      textPosition: selectedPage.textPosition,
+      fontSize: selectedPage.fontSize,
+      imagePrompt: selectedPage.imagePrompt,
+    }),
+    [selectedPage._id, selectedPage.textContent, selectedPage.textPosition, selectedPage.fontSize, selectedPage.imagePrompt]
+  );
+
+  // Auto-save hook
+  const handleAutoSave = useCallback(
+    async (data: typeof currentPageData) => {
+      // In real implementation, call Convex mutation:
+      // await updatePageText({ pageId: data.pageId, textContent: data.textContent, textPosition: data.textPosition });
+      console.log("Auto-saving page:", data.pageId);
+
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      console.log("Auto-save complete for page:", data.pageId);
+    },
+    []
+  );
+
+  const { status: saveStatus, lastSaved, error: saveError, save: manualSave } = useAutoSave({
+    data: currentPageData,
+    onSave: handleAutoSave,
+    debounceMs: 2000,
+    enabled: true,
+  });
 
   // Update handlers for inline text editing
   const updatePage = useCallback((pageIndex: number, updates: Partial<BookPage>) => {
@@ -236,16 +271,6 @@ export default function BookEditorPage({
     },
     [selectedPageIndex, updatePage]
   );
-
-  const handleSave = useCallback(async () => {
-    // In real implementation, call Convex mutation:
-    // await updatePageText({ pageId: selectedPage._id, textContent: selectedPage.textContent });
-    setIsSaving(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    setIsSaving(false);
-    console.log("Saved page:", selectedPage._id);
-  }, [selectedPage]);
 
   const handleImagePromptChange = useCallback(
     (prompt: string) => {
@@ -323,13 +348,29 @@ export default function BookEditorPage({
     <div className="h-[calc(100vh-8rem)] flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between pb-4 border-b">
-        <div>
-          <h1 className="text-xl font-bold text-gray-900">{book.title}</h1>
-          <p className="text-sm text-gray-500">
-            {book.authorName ? `by ${book.authorName}` : "Draft"} • {pages.length} pages
-          </p>
+        <div className="flex items-center gap-4">
+          <div>
+            <h1 className="text-xl font-bold text-gray-900">{book.title}</h1>
+            <p className="text-sm text-gray-500">
+              {book.authorName ? `by ${book.authorName}` : "Draft"} • {pages.length} pages
+            </p>
+          </div>
+          <SaveStatusIndicator
+            status={saveStatus}
+            lastSaved={lastSaved}
+            error={saveError}
+            onRetry={manualSave}
+          />
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={manualSave}
+            disabled={saveStatus === "saving" || saveStatus === "idle"}
+          >
+            {saveStatus === "saving" ? "Saving..." : "Save"}
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -461,7 +502,7 @@ export default function BookEditorPage({
           </div>
 
           {/* Page Preview Area */}
-          <div className="flex-1 flex items-center justify-center bg-gray-50 rounded-xl p-8 overflow-auto">
+          <div className="flex-1 flex items-center justify-center bg-gray-50 rounded-xl p-8 overflow-auto relative">
             {viewMode === "single" ? (
               <PagePreview
                 page={selectedPage}
@@ -470,7 +511,6 @@ export default function BookEditorPage({
                 onTextChange={handleTextChange}
                 onPositionChange={handlePositionChange}
                 onFontSizeChange={handleFontSizeChange}
-                onSave={handleSave}
                 editable={true}
               />
             ) : (
@@ -480,11 +520,6 @@ export default function BookEditorPage({
                 book={book}
                 showMargins={showMargins}
               />
-            )}
-            {isSaving && (
-              <div className="absolute top-4 right-4 bg-primary-500 text-white text-xs px-3 py-1 rounded-full animate-pulse">
-                Saving...
-              </div>
             )}
           </div>
         </div>
@@ -518,7 +553,6 @@ export default function BookEditorPage({
               <textarea
                 value={selectedPage.textContent}
                 onChange={(e) => handleTextChange(e.target.value)}
-                onBlur={handleSave}
                 rows={4}
                 className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               />
@@ -536,10 +570,7 @@ export default function BookEditorPage({
                 {(["top", "middle", "bottom"] as const).map((position) => (
                   <button
                     key={position}
-                    onClick={() => {
-                      handlePositionChange(position);
-                      handleSave();
-                    }}
+                    onClick={() => handlePositionChange(position)}
                     className={cn(
                       "flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors",
                       selectedPage.textPosition === position
