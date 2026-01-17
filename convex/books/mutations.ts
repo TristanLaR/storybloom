@@ -95,6 +95,19 @@ export const updateBookStatus = mutation({
   },
 });
 
+export const updateCoverPrompt = mutation({
+  args: {
+    bookId: v.id("books"),
+    coverPrompt: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.bookId, {
+      coverPrompt: args.coverPrompt,
+      updatedAt: Date.now(),
+    });
+  },
+});
+
 export const deleteBook = mutation({
   args: { bookId: v.id("books") },
   handler: async (ctx, args) => {

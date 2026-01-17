@@ -339,3 +339,69 @@ export const regeneratePageImage = action({
     return { success: false };
   },
 });
+
+// Action to regenerate the book cover
+export const regenerateCover = action({
+  args: {
+    bookId: v.id("books"),
+    newPrompt: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const nanoBananaApiKey = process.env.NANO_BANANA_API_KEY;
+    if (!nanoBananaApiKey) {
+      throw new Error("NANO_BANANA_API_KEY environment variable is not set");
+    }
+
+    // Get the book
+    const book = await ctx.runQuery(internal.books.internalQueries.getBookInternal, {
+      bookId: args.bookId,
+    });
+
+    if (!book) {
+      throw new Error("Book not found");
+    }
+
+    // Use new prompt or default cover prompt
+    const coverPrompt =
+      args.newPrompt ||
+      book.coverPrompt ||
+      `A beautiful children's book cover for "${book.title}" in ${book.artStyle} style, featuring magical and whimsical elements that capture the essence of a children's adventure story`;
+
+    // Generate new cover
+    const coverResult = await generateCoverImage(
+      coverPrompt,
+      book.artStyle,
+      book.title,
+      book.authorName,
+      nanoBananaApiKey
+    );
+
+    if (coverResult.imageData) {
+      const blob = new Blob([coverResult.imageData], { type: "image/png" });
+      const coverStorageId = await ctx.storage.store(blob);
+
+      // Update book with new cover
+      await ctx.runMutation(internal.books.internalMutations.updateBookCover, {
+        bookId: args.bookId,
+        coverImageId: coverStorageId,
+      });
+
+      // Update cover prompt if it changed
+      if (args.newPrompt) {
+        await ctx.runMutation(internal.books.internalMutations.updateBookCoverPrompt, {
+          bookId: args.bookId,
+          coverPrompt: args.newPrompt,
+        });
+      }
+
+      // Increment cover regeneration count
+      await ctx.runMutation(internal.books.internalMutations.incrementCoverRegenerationCount, {
+        bookId: args.bookId,
+      });
+
+      return { success: true, storageId: coverStorageId };
+    }
+
+    return { success: false };
+  },
+});

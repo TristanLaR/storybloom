@@ -63,6 +63,8 @@ export default defineSchema({
     ),
     authorName: v.optional(v.string()),
     coverImageId: v.optional(v.id("_storage")),
+    coverPrompt: v.optional(v.string()),
+    coverRegenerationCount: v.optional(v.number()),
     interiorPdfId: v.optional(v.id("_storage")),
     coverPdfId: v.optional(v.id("_storage")),
     generationCreditsUsed: v.number(),
