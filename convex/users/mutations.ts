@@ -1,4 +1,4 @@
-import { mutation } from "../_generated/server";
+import { mutation, internalMutation } from "../_generated/server";
 import { v } from "convex/values";
 
 export const updateProfile = mutation({
@@ -19,7 +19,7 @@ export const updateProfile = mutation({
   },
 });
 
-export const updateStripeCustomerId = mutation({
+export const updateStripeCustomerId = internalMutation({
   args: {
     userId: v.id("users"),
     stripeCustomerId: v.string(),
