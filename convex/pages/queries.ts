@@ -25,6 +25,16 @@ export const getPageInternal = internalQuery({
   },
 });
 
+export const getBookPagesInternal = internalQuery({
+  args: { bookId: v.id("books") },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("pages")
+      .withIndex("by_book_page", (q: any) => q.eq("bookId", args.bookId))
+      .collect();
+  },
+});
+
 export const getPageWithImage = query({
   args: { pageId: v.id("pages") },
   handler: async (ctx, args) => {

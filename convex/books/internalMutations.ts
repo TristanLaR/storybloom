@@ -94,3 +94,29 @@ export const updateBookAuthor = internalMutation({
     });
   },
 });
+
+export const updateInteriorPdf = internalMutation({
+  args: {
+    bookId: v.id("books"),
+    interiorPdfId: v.id("_storage"),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.bookId, {
+      interiorPdfId: args.interiorPdfId,
+      updatedAt: Date.now(),
+    });
+  },
+});
+
+export const updateCoverPdf = internalMutation({
+  args: {
+    bookId: v.id("books"),
+    coverPdfId: v.id("_storage"),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.bookId, {
+      coverPdfId: args.coverPdfId,
+      updatedAt: Date.now(),
+    });
+  },
+});
