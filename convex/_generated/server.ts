@@ -67,3 +67,17 @@ export function internalAction<Args, Output>(config: {
 }): any {
   return config;
 }
+
+export type HttpActionCtx = {
+  runQuery: any;
+  runMutation: any;
+  runAction: any;
+  storage: any;
+  auth: any;
+};
+
+export function httpAction(
+  handler: (ctx: HttpActionCtx, request: Request) => Promise<Response>
+): any {
+  return handler;
+}
