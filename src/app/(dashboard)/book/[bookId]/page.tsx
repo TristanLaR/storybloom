@@ -1,9 +1,10 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { InlineTextEditor } from "@/components/editor/InlineTextEditor";
 
 // Mock page data for development
 interface BookPage {
@@ -13,6 +14,7 @@ interface BookPage {
   textContent: string;
   textPosition: "top" | "middle" | "bottom";
   imageUrl: string | null;
+  fontSize?: number;
 }
 
 interface Book {
@@ -34,7 +36,7 @@ const mockBook: Book = {
   coverImageUrl: null,
 };
 
-const mockPages: BookPage[] = Array.from({ length: 24 }, (_, i) => ({
+const createMockPages = (): BookPage[] => Array.from({ length: 24 }, (_, i) => ({
   _id: `page-${i + 1}`,
   pageNumber: i + 1,
   pageType: i === 0 ? "title" : i === 23 ? "back_cover" : "story",
@@ -43,6 +45,7 @@ const mockPages: BookPage[] = Array.from({ length: 24 }, (_, i) => ({
     : `Once upon a time, on page ${i + 1}, the adventure continued with even more excitement and wonder...`,
   textPosition: i === 0 ? "middle" : "bottom",
   imageUrl: null,
+  fontSize: 14,
 }));
 
 function PageThumbnail({
@@ -86,10 +89,20 @@ function PagePreview({
   page,
   book,
   showMargins,
+  onTextChange,
+  onPositionChange,
+  onFontSizeChange,
+  onSave,
+  editable = true,
 }: {
   page: BookPage;
   book: Book;
   showMargins: boolean;
+  onTextChange?: (text: string) => void;
+  onPositionChange?: (position: "top" | "middle" | "bottom") => void;
+  onFontSizeChange?: (size: number) => void;
+  onSave?: () => void;
+  editable?: boolean;
 }) {
   return (
     <div className="relative bg-white rounded-lg shadow-lg aspect-square max-w-md mx-auto overflow-hidden">
@@ -115,19 +128,37 @@ function PagePreview({
         )}
       </div>
 
-      {/* Text Overlay */}
-      <div
-        className={cn(
-          "absolute left-0 right-0 p-4 text-center",
-          page.textPosition === "top" && "top-0",
-          page.textPosition === "middle" && "top-1/2 -translate-y-1/2",
-          page.textPosition === "bottom" && "bottom-0"
-        )}
-      >
-        <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 max-w-xs mx-auto">
-          <p className="text-sm text-gray-800 whitespace-pre-line">{page.textContent}</p>
+      {/* Inline Text Editor */}
+      {editable && onTextChange && onPositionChange ? (
+        <InlineTextEditor
+          value={page.textContent}
+          textPosition={page.textPosition}
+          fontSize={page.fontSize || 14}
+          onChange={onTextChange}
+          onPositionChange={onPositionChange}
+          onFontSizeChange={onFontSizeChange}
+          onBlur={onSave}
+        />
+      ) : (
+        /* Static Text Display */
+        <div
+          className={cn(
+            "absolute left-0 right-0 p-4 text-center",
+            page.textPosition === "top" && "top-0",
+            page.textPosition === "middle" && "top-1/2 -translate-y-1/2",
+            page.textPosition === "bottom" && "bottom-0"
+          )}
+        >
+          <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 max-w-xs mx-auto">
+            <p
+              className="text-gray-800 whitespace-pre-line"
+              style={{ fontSize: `${page.fontSize || 14}px` }}
+            >
+              {page.textContent}
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Bleed/Safety Margins */}
       {showMargins && (
@@ -193,7 +224,8 @@ export default function BookEditorPage({
   // const pages = useQuery(api.pages.getBookPagesWithImages, { bookId });
 
   const book = mockBook;
-  const pages = mockPages;
+  const [pages, setPages] = useState<BookPage[]>(() => createMockPages());
+  const [isSaving, setIsSaving] = useState(false);
 
   const [selectedPageIndex, setSelectedPageIndex] = useState(0);
   const [viewMode, setViewMode] = useState<"single" | "spread">("single");
@@ -203,6 +235,46 @@ export default function BookEditorPage({
   const selectedPage = pages[selectedPageIndex];
   const leftPage = viewMode === "spread" ? pages[selectedPageIndex] : null;
   const rightPage = viewMode === "spread" ? pages[selectedPageIndex + 1] : null;
+
+  // Update handlers for inline text editing
+  const updatePage = useCallback((pageIndex: number, updates: Partial<BookPage>) => {
+    setPages((prevPages) =>
+      prevPages.map((page, index) =>
+        index === pageIndex ? { ...page, ...updates } : page
+      )
+    );
+  }, []);
+
+  const handleTextChange = useCallback(
+    (text: string) => {
+      updatePage(selectedPageIndex, { textContent: text });
+    },
+    [selectedPageIndex, updatePage]
+  );
+
+  const handlePositionChange = useCallback(
+    (position: "top" | "middle" | "bottom") => {
+      updatePage(selectedPageIndex, { textPosition: position });
+    },
+    [selectedPageIndex, updatePage]
+  );
+
+  const handleFontSizeChange = useCallback(
+    (size: number) => {
+      updatePage(selectedPageIndex, { fontSize: size });
+    },
+    [selectedPageIndex, updatePage]
+  );
+
+  const handleSave = useCallback(async () => {
+    // In real implementation, call Convex mutation:
+    // await updatePageText({ pageId: selectedPage._id, textContent: selectedPage.textContent });
+    setIsSaving(true);
+    // Simulate API call
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    setIsSaving(false);
+    console.log("Saved page:", selectedPage._id);
+  }, [selectedPage]);
 
   const handlePrevPage = () => {
     const step = viewMode === "spread" ? 2 : 1;
@@ -369,6 +441,11 @@ export default function BookEditorPage({
                 page={selectedPage}
                 book={book}
                 showMargins={showMargins}
+                onTextChange={handleTextChange}
+                onPositionChange={handlePositionChange}
+                onFontSizeChange={handleFontSizeChange}
+                onSave={handleSave}
+                editable={true}
               />
             ) : (
               <SpreadPreview
@@ -377,6 +454,11 @@ export default function BookEditorPage({
                 book={book}
                 showMargins={showMargins}
               />
+            )}
+            {isSaving && (
+              <div className="absolute top-4 right-4 bg-primary-500 text-white text-xs px-3 py-1 rounded-full animate-pulse">
+                Saving...
+              </div>
             )}
           </div>
         </div>
@@ -409,10 +491,14 @@ export default function BookEditorPage({
               </label>
               <textarea
                 value={selectedPage.textContent}
-                onChange={() => {}} // Would update in real implementation
+                onChange={(e) => handleTextChange(e.target.value)}
+                onBlur={handleSave}
                 rows={4}
                 className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               />
+              <p className="text-xs text-gray-500 mt-1">
+                {selectedPage.textContent.length}/200 characters
+              </p>
             </div>
 
             {/* Text Position */}
@@ -421,10 +507,13 @@ export default function BookEditorPage({
                 Text Position
               </label>
               <div className="flex gap-2">
-                {["top", "middle", "bottom"].map((position) => (
+                {(["top", "middle", "bottom"] as const).map((position) => (
                   <button
                     key={position}
-                    onClick={() => {}} // Would update in real implementation
+                    onClick={() => {
+                      handlePositionChange(position);
+                      handleSave();
+                    }}
                     className={cn(
                       "flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors",
                       selectedPage.textPosition === position
