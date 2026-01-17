@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { InlineTextEditor } from "@/components/editor/InlineTextEditor";
+import { ImageRegenerator } from "@/components/editor/ImageRegenerator";
 
 // Mock page data for development
 interface BookPage {
@@ -14,6 +15,8 @@ interface BookPage {
   textContent: string;
   textPosition: "top" | "middle" | "bottom";
   imageUrl: string | null;
+  imagePrompt: string;
+  imageGenerationCount: number;
   fontSize?: number;
 }
 
@@ -45,6 +48,10 @@ const createMockPages = (): BookPage[] => Array.from({ length: 24 }, (_, i) => (
     : `Once upon a time, on page ${i + 1}, the adventure continued with even more excitement and wonder...`,
   textPosition: i === 0 ? "middle" : "bottom",
   imageUrl: null,
+  imagePrompt: i === 0
+    ? `Title page illustration for "${mockBook.title}" in watercolor style, featuring the main characters in a magical setting`
+    : `Illustration for page ${i + 1} showing the adventure continuing, watercolor style, children's book illustration`,
+  imageGenerationCount: 0,
   fontSize: 14,
 }));
 
@@ -275,6 +282,33 @@ export default function BookEditorPage({
     setIsSaving(false);
     console.log("Saved page:", selectedPage._id);
   }, [selectedPage]);
+
+  const handleImagePromptChange = useCallback(
+    (prompt: string) => {
+      updatePage(selectedPageIndex, { imagePrompt: prompt });
+    },
+    [selectedPageIndex, updatePage]
+  );
+
+  const handleRegenerate = useCallback(
+    async (newPrompt?: string) => {
+      // In real implementation, call Convex action:
+      // await regeneratePageImage({ pageId: selectedPage._id, newPrompt });
+      console.log("Regenerating image for page:", selectedPage._id, "with prompt:", newPrompt);
+
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      // Update regeneration count
+      updatePage(selectedPageIndex, {
+        imageGenerationCount: selectedPage.imageGenerationCount + 1,
+        // In real implementation, the imageUrl would be updated by the mutation
+      });
+
+      console.log("Image regenerated successfully");
+    },
+    [selectedPageIndex, selectedPage, updatePage]
+  );
 
   const handlePrevPage = () => {
     const step = viewMode === "spread" ? 2 : 1;
@@ -527,44 +561,18 @@ export default function BookEditorPage({
               </div>
             </div>
 
-            {/* Image Actions */}
+            {/* Image Regenerator */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Illustration
               </label>
-              {selectedPage.imageUrl ? (
-                <div className="space-y-2">
-                  <img
-                    src={selectedPage.imageUrl}
-                    alt="Page illustration"
-                    className="w-full aspect-square object-cover rounded-lg"
-                  />
-                  <Button variant="outline" size="sm" className="w-full">
-                    Regenerate Image
-                  </Button>
-                </div>
-              ) : (
-                <div className="aspect-square bg-gray-100 rounded-lg flex items-center justify-center">
-                  <Button variant="outline" size="sm">
-                    Generate Image
-                  </Button>
-                </div>
-              )}
-            </div>
-
-            {/* Image Prompt */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Image Prompt
-              </label>
-              <textarea
-                placeholder="Describe what the illustration should show..."
-                rows={3}
-                className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              <ImageRegenerator
+                imageUrl={selectedPage.imageUrl}
+                imagePrompt={selectedPage.imagePrompt}
+                regenerationCount={selectedPage.imageGenerationCount}
+                onRegenerate={handleRegenerate}
+                onPromptChange={handleImagePromptChange}
               />
-              <p className="text-xs text-gray-500 mt-1">
-                Edit the prompt and regenerate to create a new image
-              </p>
             </div>
           </div>
         </div>
