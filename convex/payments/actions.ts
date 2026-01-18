@@ -20,16 +20,52 @@ function getStripe(): Stripe {
   return new Stripe(apiKey, { apiVersion: "2025-12-15.clover" });
 }
 
+// Generate a unique idempotency key
+function generateIdempotencyKey(
+  type: string,
+  userId: string,
+  resourceId: string,
+  timestamp?: number
+): string {
+  const ts = timestamp || Date.now();
+  return `${type}_${userId}_${resourceId}_${ts}`;
+}
+
+// Helper to get authenticated user from email
+async function getAuthenticatedUserFromEmail(
+  ctx: { runQuery: (ref: any, args: any) => Promise<any> },
+  email: string | undefined
+) {
+  if (!email) {
+    throw new Error("Authentication required");
+  }
+
+  const user = await ctx.runQuery(internal.users.queries.getUserByEmailInternal, {
+    email,
+  });
+
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  return user;
+}
+
 // Create a payment intent for book generation
 export const createGenerationPaymentIntent = action({
   args: {
     bookId: v.id("books"),
-    userId: v.id("users"),
   },
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Authentication required");
+    }
+
+    const user = await getAuthenticatedUserFromEmail(ctx, identity.email);
     const stripe = getStripe();
 
-    // Get book details
+    // Get book details and verify ownership
     const book = await ctx.runQuery(internal.books.internalQueries.getBookInternal, {
       bookId: args.bookId,
     });
@@ -38,47 +74,54 @@ export const createGenerationPaymentIntent = action({
       throw new Error("Book not found");
     }
 
-    // Get user for Stripe customer ID
-    const user = await ctx.runQuery(internal.users.queries.getUserInternal, {
-      userId: args.userId,
-    });
+    if (book.userId !== user._id) {
+      throw new Error("You don't have permission to access this book");
+    }
 
     // Create or get Stripe customer
-    let customerId = user?.stripeCustomerId;
+    let customerId = user.stripeCustomerId;
 
     if (!customerId) {
       const customer = await stripe.customers.create({
-        email: user?.email || undefined,
-        name: user?.name || undefined,
+        email: user.email || undefined,
+        name: user.name || undefined,
         metadata: {
-          userId: args.userId,
+          userId: user._id,
         },
       });
       customerId = customer.id;
 
       // Update user with Stripe customer ID
       await ctx.runMutation(internal.users.mutations.updateStripeCustomerId, {
-        userId: args.userId,
+        userId: user._id,
         stripeCustomerId: customerId,
       });
     }
 
-    // Create payment intent
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: PAYMENT_AMOUNTS.generation,
-      currency: "usd",
-      customer: customerId,
-      metadata: {
-        type: "generation",
-        bookId: args.bookId,
-        userId: args.userId,
+    // Generate idempotency key to prevent duplicate payments
+    const idempotencyKey = generateIdempotencyKey("generation", user._id, args.bookId);
+
+    // Create payment intent with idempotency key
+    const paymentIntent = await stripe.paymentIntents.create(
+      {
+        amount: PAYMENT_AMOUNTS.generation,
+        currency: "usd",
+        customer: customerId,
+        metadata: {
+          type: "generation",
+          bookId: args.bookId,
+          userId: user._id,
+        },
+        description: `Book generation: ${book.title}`,
       },
-      description: `Book generation: ${book.title}`,
-    });
+      {
+        idempotencyKey,
+      }
+    );
 
     // Create payment record
     await ctx.runMutation(internal.payments.mutations.createPaymentRecord, {
-      userId: args.userId,
+      userId: user._id,
       bookId: args.bookId,
       type: "generation",
       amount: PAYMENT_AMOUNTS.generation,
@@ -98,56 +141,74 @@ export const createGenerationPaymentIntent = action({
 export const createRegenerationPaymentIntent = action({
   args: {
     bookId: v.id("books"),
-    userId: v.id("users"),
     pageId: v.optional(v.id("pages")),
     count: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Authentication required");
+    }
+
+    const user = await getAuthenticatedUserFromEmail(ctx, identity.email);
     const stripe = getStripe();
     const count = args.count || 1;
     const amount = PAYMENT_AMOUNTS.regeneration * count;
 
-    // Get user for Stripe customer ID
-    const user = await ctx.runQuery(internal.users.queries.getUserInternal, {
-      userId: args.userId,
+    // Verify book ownership
+    const book = await ctx.runQuery(internal.books.internalQueries.getBookInternal, {
+      bookId: args.bookId,
     });
 
-    let customerId = user?.stripeCustomerId;
+    if (!book || book.userId !== user._id) {
+      throw new Error("You don't have permission to access this book");
+    }
+
+    let customerId = user.stripeCustomerId;
 
     if (!customerId) {
       const customer = await stripe.customers.create({
-        email: user?.email || undefined,
-        name: user?.name || undefined,
+        email: user.email || undefined,
+        name: user.name || undefined,
         metadata: {
-          userId: args.userId,
+          userId: user._id,
         },
       });
       customerId = customer.id;
 
       await ctx.runMutation(internal.users.mutations.updateStripeCustomerId, {
-        userId: args.userId,
+        userId: user._id,
         stripeCustomerId: customerId,
       });
     }
 
-    // Create payment intent
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount,
-      currency: "usd",
-      customer: customerId,
-      metadata: {
-        type: "regeneration",
-        bookId: args.bookId,
-        userId: args.userId,
-        pageId: args.pageId || "",
-        count: String(count),
+    // Generate idempotency key
+    const resourceId = args.pageId || args.bookId;
+    const idempotencyKey = generateIdempotencyKey("regeneration", user._id, resourceId);
+
+    // Create payment intent with idempotency key
+    const paymentIntent = await stripe.paymentIntents.create(
+      {
+        amount,
+        currency: "usd",
+        customer: customerId,
+        metadata: {
+          type: "regeneration",
+          bookId: args.bookId,
+          userId: user._id,
+          pageId: args.pageId || "",
+          count: String(count),
+        },
+        description: `Image regeneration (${count}x)`,
       },
-      description: `Image regeneration (${count}x)`,
-    });
+      {
+        idempotencyKey,
+      }
+    );
 
     // Create payment record
     await ctx.runMutation(internal.payments.mutations.createPaymentRecord, {
-      userId: args.userId,
+      userId: user._id,
       bookId: args.bookId,
       type: "regeneration",
       amount,
@@ -167,13 +228,17 @@ export const createRegenerationPaymentIntent = action({
 export const createPrintOrderPaymentIntent = action({
   args: {
     orderId: v.id("orders"),
-    userId: v.id("users"),
-    amount: v.number(),
   },
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Authentication required");
+    }
+
+    const user = await getAuthenticatedUserFromEmail(ctx, identity.email);
     const stripe = getStripe();
 
-    // Get order details
+    // Get order details and verify ownership
     const order = await ctx.runQuery(internal.orders.queries.getOrderInternal, {
       orderId: args.orderId,
     });
@@ -182,60 +247,70 @@ export const createPrintOrderPaymentIntent = action({
       throw new Error("Order not found");
     }
 
-    // Get user for Stripe customer ID
-    const user = await ctx.runQuery(internal.users.queries.getUserInternal, {
-      userId: args.userId,
-    });
+    if (order.userId !== user._id) {
+      throw new Error("You don't have permission to access this order");
+    }
 
-    let customerId = user?.stripeCustomerId;
+    // Use the server-calculated total amount from the order (not from client)
+    const amount = order.totalAmount;
+
+    let customerId = user.stripeCustomerId;
 
     if (!customerId) {
       const customer = await stripe.customers.create({
-        email: user?.email || undefined,
-        name: user?.name || undefined,
+        email: user.email || undefined,
+        name: user.name || undefined,
         metadata: {
-          userId: args.userId,
+          userId: user._id,
         },
       });
       customerId = customer.id;
 
       await ctx.runMutation(internal.users.mutations.updateStripeCustomerId, {
-        userId: args.userId,
+        userId: user._id,
         stripeCustomerId: customerId,
       });
     }
 
-    // Create payment intent
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: args.amount,
-      currency: "usd",
-      customer: customerId,
-      metadata: {
-        type: "print_order",
-        orderId: args.orderId,
-        userId: args.userId,
-        bookId: order.bookId,
-      },
-      description: `Print order #${args.orderId}`,
-      shipping: {
-        name: order.shippingAddress.name,
-        address: {
-          line1: order.shippingAddress.street1,
-          line2: order.shippingAddress.street2 || undefined,
-          city: order.shippingAddress.city,
-          state: order.shippingAddress.state,
-          postal_code: order.shippingAddress.postalCode,
-          country: order.shippingAddress.country,
+    // Generate idempotency key for the order
+    const idempotencyKey = generateIdempotencyKey("print_order", user._id, args.orderId);
+
+    // Create payment intent with idempotency key
+    const paymentIntent = await stripe.paymentIntents.create(
+      {
+        amount,
+        currency: "usd",
+        customer: customerId,
+        metadata: {
+          type: "print_order",
+          orderId: args.orderId,
+          userId: user._id,
+          bookId: order.bookId,
+        },
+        description: `Print order #${args.orderId}`,
+        shipping: {
+          name: order.shippingAddress.name,
+          address: {
+            line1: order.shippingAddress.street1,
+            line2: order.shippingAddress.street2 || undefined,
+            city: order.shippingAddress.city,
+            state: order.shippingAddress.state,
+            postal_code: order.shippingAddress.postalCode,
+            country: order.shippingAddress.country,
+          },
         },
       },
-    });
+      {
+        idempotencyKey,
+      }
+    );
 
     // Create payment record
     await ctx.runMutation(internal.payments.mutations.createPaymentRecord, {
-      userId: args.userId,
+      userId: user._id,
       orderId: args.orderId,
       type: "print_order",
-      amount: args.amount,
+      amount,
       stripePaymentIntentId: paymentIntent.id,
       status: "pending",
     });
@@ -249,7 +324,7 @@ export const createPrintOrderPaymentIntent = action({
     return {
       clientSecret: paymentIntent.client_secret,
       paymentIntentId: paymentIntent.id,
-      amount: args.amount,
+      amount,
     };
   },
 });

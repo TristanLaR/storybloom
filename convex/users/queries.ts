@@ -20,7 +20,32 @@ export const getUserByEmail = query({
   handler: async (ctx, args) => {
     return await ctx.db
       .query("users")
-      .withIndex("by_email", (q: any) => q.eq("email", args.email))
+      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .first();
+  },
+});
+
+export const getUserByEmailInternal = internalQuery({
+  args: { email: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .first();
+  },
+});
+
+export const currentUser = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      return null;
+    }
+
+    return await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", identity.email))
       .first();
   },
 });

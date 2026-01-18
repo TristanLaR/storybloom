@@ -1,4 +1,4 @@
-import { internalMutation, mutation } from "../_generated/server";
+import { internalMutation } from "../_generated/server";
 import { v } from "convex/values";
 
 export const createPaymentRecord = internalMutation({
@@ -41,7 +41,7 @@ export const updatePaymentStatus = internalMutation({
   handler: async (ctx, args) => {
     const payment = await ctx.db
       .query("payments")
-      .withIndex("by_stripe", (q: any) => q.eq("stripePaymentIntentId", args.stripePaymentIntentId))
+      .withIndex("by_stripe", (q) => q.eq("stripePaymentIntentId", args.stripePaymentIntentId))
       .first();
 
     if (payment) {
@@ -59,7 +59,7 @@ export const getPaymentByIntentId = internalMutation({
   handler: async (ctx, args) => {
     return await ctx.db
       .query("payments")
-      .withIndex("by_stripe", (q: any) => q.eq("stripePaymentIntentId", args.stripePaymentIntentId))
+      .withIndex("by_stripe", (q) => q.eq("stripePaymentIntentId", args.stripePaymentIntentId))
       .first();
   },
 });

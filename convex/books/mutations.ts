@@ -1,9 +1,12 @@
 import { mutation } from "../_generated/server";
 import { v } from "convex/values";
+import {
+  getAuthenticatedUser,
+  verifyBookOwnership,
+} from "../lib/authHelpers";
 
 export const createBook = mutation({
   args: {
-    userId: v.id("users"),
     title: v.string(),
     theme: v.string(),
     themeCategory: v.optional(
@@ -39,9 +42,12 @@ export const createBook = mutation({
     authorName: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const user = await getAuthenticatedUser(ctx);
     const now = Date.now();
+
     return await ctx.db.insert("books", {
       ...args,
+      userId: user._id,
       status: "setup",
       generationCreditsUsed: 0,
       createdAt: now,
@@ -58,6 +64,9 @@ export const updateBook = mutation({
     authorName: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const user = await getAuthenticatedUser(ctx);
+    await verifyBookOwnership(ctx, args.bookId, user);
+
     const { bookId, ...updates } = args;
     const filteredUpdates = Object.fromEntries(
       Object.entries(updates).filter(([, value]) => value !== undefined)
@@ -82,6 +91,9 @@ export const updateBookStatus = mutation({
     ),
   },
   handler: async (ctx, args) => {
+    const user = await getAuthenticatedUser(ctx);
+    await verifyBookOwnership(ctx, args.bookId, user);
+
     const updates: Record<string, unknown> = {
       status: args.status,
       updatedAt: Date.now(),
@@ -101,6 +113,9 @@ export const updateCoverPrompt = mutation({
     coverPrompt: v.string(),
   },
   handler: async (ctx, args) => {
+    const user = await getAuthenticatedUser(ctx);
+    await verifyBookOwnership(ctx, args.bookId, user);
+
     await ctx.db.patch(args.bookId, {
       coverPrompt: args.coverPrompt,
       updatedAt: Date.now(),
@@ -111,10 +126,13 @@ export const updateCoverPrompt = mutation({
 export const deleteBook = mutation({
   args: { bookId: v.id("books") },
   handler: async (ctx, args) => {
+    const user = await getAuthenticatedUser(ctx);
+    await verifyBookOwnership(ctx, args.bookId, user);
+
     // Delete associated pages
     const pages = await ctx.db
       .query("pages")
-      .withIndex("by_book", (q: any) => q.eq("bookId", args.bookId))
+      .withIndex("by_book", (q) => q.eq("bookId", args.bookId))
       .collect();
 
     for (const page of pages) {
@@ -124,7 +142,7 @@ export const deleteBook = mutation({
     // Delete associated characters
     const characters = await ctx.db
       .query("characters")
-      .withIndex("by_book", (q: any) => q.eq("bookId", args.bookId))
+      .withIndex("by_book", (q) => q.eq("bookId", args.bookId))
       .collect();
 
     for (const character of characters) {
@@ -139,14 +157,14 @@ export const deleteBook = mutation({
 export const duplicateBook = mutation({
   args: { bookId: v.id("books") },
   handler: async (ctx, args) => {
-    const book = await ctx.db.get(args.bookId);
-    if (!book) throw new Error("Book not found");
+    const user = await getAuthenticatedUser(ctx);
+    const book = await verifyBookOwnership(ctx, args.bookId, user);
 
     const now = Date.now();
 
     // Create a copy of the book
     const newBookId = await ctx.db.insert("books", {
-      userId: book.userId,
+      userId: user._id,
       title: `${book.title} (Copy)`,
       theme: book.theme,
       themeCategory: book.themeCategory,
@@ -156,7 +174,7 @@ export const duplicateBook = mutation({
       authorName: book.authorName,
       coverPrompt: book.coverPrompt,
       coverImageId: book.coverImageId,
-      status: "draft", // Reset to draft status
+      status: "draft",
       generationCreditsUsed: 0,
       createdAt: now,
       updatedAt: now,
@@ -165,7 +183,7 @@ export const duplicateBook = mutation({
     // Copy characters
     const characters = await ctx.db
       .query("characters")
-      .withIndex("by_book", (q: any) => q.eq("bookId", args.bookId))
+      .withIndex("by_book", (q) => q.eq("bookId", args.bookId))
       .collect();
 
     for (const character of characters) {
@@ -176,7 +194,7 @@ export const duplicateBook = mutation({
         description: character.description,
         relationship: character.relationship,
         referenceImageId: character.referenceImageId,
-        generatedImageId: character.generatedImageId,
+        aiStylePrompt: character.aiStylePrompt,
         order: character.order,
         createdAt: now,
       });
@@ -185,18 +203,19 @@ export const duplicateBook = mutation({
     // Copy pages
     const pages = await ctx.db
       .query("pages")
-      .withIndex("by_book", (q: any) => q.eq("bookId", args.bookId))
+      .withIndex("by_book", (q) => q.eq("bookId", args.bookId))
       .collect();
 
     for (const page of pages) {
       await ctx.db.insert("pages", {
         bookId: newBookId,
-        order: page.order,
-        storyText: page.storyText,
+        pageNumber: page.pageNumber,
+        pageType: page.pageType,
+        textContent: page.textContent,
+        textPosition: page.textPosition,
         imagePrompt: page.imagePrompt,
         imageId: page.imageId,
-        textPosition: page.textPosition,
-        textStyle: page.textStyle,
+        imageGenerationCount: 0,
         createdAt: now,
         updatedAt: now,
       });
@@ -209,7 +228,6 @@ export const duplicateBook = mutation({
 // Combined mutation to create a book with all its characters
 export const createBookWithCharacters = mutation({
   args: {
-    userId: v.id("users"),
     title: v.string(),
     theme: v.string(),
     themeCategory: v.optional(
@@ -254,12 +272,14 @@ export const createBookWithCharacters = mutation({
     ),
   },
   handler: async (ctx, args) => {
+    const user = await getAuthenticatedUser(ctx);
     const { characters, ...bookData } = args;
     const now = Date.now();
 
     // Create the book
     const bookId = await ctx.db.insert("books", {
       ...bookData,
+      userId: user._id,
       status: "setup",
       generationCreditsUsed: 0,
       createdAt: now,

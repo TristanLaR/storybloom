@@ -1,10 +1,21 @@
 import { mutation, internalMutation } from "../_generated/server";
 import { v } from "convex/values";
+import {
+  getAuthenticatedUser,
+  verifyBookOwnership,
+  verifyOrderOwnership,
+} from "../lib/authHelpers";
+
+// Pricing constants (in cents)
+const PRICING = {
+  basePrintCost: 899, // $8.99 base for hardcover
+  perPageCost: 4, // $0.04 per page
+  minPages: 24,
+};
 
 export const createOrder = mutation({
   args: {
     bookId: v.id("books"),
-    userId: v.id("users"),
     quantity: v.number(),
     shippingAddress: v.object({
       name: v.string(),
@@ -17,15 +28,39 @@ export const createOrder = mutation({
       phone: v.optional(v.string()),
     }),
     shippingMethod: v.string(),
-    printCost: v.number(),
-    shippingCost: v.number(),
-    taxAmount: v.number(),
-    totalAmount: v.number(),
+    shippingCost: v.number(), // This comes from Lulu API via action, verified server-side
   },
   handler: async (ctx, args) => {
+    const user = await getAuthenticatedUser(ctx);
+    const book = await verifyBookOwnership(ctx, args.bookId, user);
+
+    // Calculate print cost server-side based on page count
+    const pages = await ctx.db
+      .query("pages")
+      .withIndex("by_book", (q) => q.eq("bookId", args.bookId))
+      .collect();
+
+    const pageCount = Math.max(PRICING.minPages, pages.length);
+    const unitPrintCost = PRICING.basePrintCost + PRICING.perPageCost * pageCount;
+    const printCost = unitPrintCost * args.quantity;
+
+    // Calculate tax (simplified - in production, use a tax API)
+    const subtotal = printCost + args.shippingCost;
+    const taxRate = 0.0; // Tax calculated by payment processor or fulfillment partner
+    const taxAmount = Math.round(subtotal * taxRate);
+    const totalAmount = subtotal + taxAmount;
+
     const now = Date.now();
     return await ctx.db.insert("orders", {
-      ...args,
+      bookId: args.bookId,
+      userId: user._id,
+      quantity: args.quantity,
+      shippingAddress: args.shippingAddress,
+      shippingMethod: args.shippingMethod,
+      printCost,
+      shippingCost: args.shippingCost,
+      taxAmount,
+      totalAmount,
       status: "pending_payment",
       createdAt: now,
       updatedAt: now,
@@ -110,14 +145,12 @@ export const updateOrderTracking = internalMutation({
 export const cancelOrder = mutation({
   args: { orderId: v.id("orders") },
   handler: async (ctx, args) => {
-    const order = await ctx.db.get(args.orderId);
-
-    if (!order) {
-      throw new Error("Order not found");
-    }
+    const user = await getAuthenticatedUser(ctx);
+    const order = await verifyOrderOwnership(ctx, args.orderId, user);
 
     // Only allow cancellation for certain statuses
-    if (!["pending_payment", "paid"].includes(order.status)) {
+    const cancellableStatuses = ["pending_payment", "paid"];
+    if (!cancellableStatuses.includes(order.status as string)) {
       throw new Error("Order cannot be cancelled at this stage");
     }
 

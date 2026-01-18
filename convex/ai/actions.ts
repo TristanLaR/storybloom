@@ -13,6 +13,9 @@ import {
 import {
   moderateContent,
   quickModerationCheck,
+  moderateGeneratedStory,
+  sanitizeForPrompt,
+  detectPromptInjection,
   type ContentToModerate,
 } from "../moderation/contentFilter";
 
@@ -39,6 +42,26 @@ export const generateStory = action({
     }),
   },
   handler: async (ctx, args) => {
+    // Check for prompt injection in all user inputs
+    const allInputs = [
+      args.title,
+      args.theme,
+      args.setting.primary,
+      args.setting.additionalNotes || "",
+      ...args.characters.map((c) => c.name),
+      ...args.characters.map((c) => c.description),
+      ...args.characters.map((c) => c.relationship || ""),
+    ];
+
+    for (const input of allInputs) {
+      const injectionCheck = detectPromptInjection(input);
+      if (injectionCheck.detected) {
+        throw new Error(
+          "Content contains potentially harmful instructions and cannot be processed"
+        );
+      }
+    }
+
     // Content moderation check before generation
     const contentToModerate: ContentToModerate = {
       title: args.title,
@@ -60,17 +83,40 @@ export const generateStory = action({
       throw new Error("GEMINI_API_KEY environment variable is not set");
     }
 
+    // Sanitize user inputs before passing to AI
     const params: GenerateStoryParams = {
-      title: args.title,
-      theme: args.theme,
+      title: sanitizeForPrompt(args.title),
+      theme: sanitizeForPrompt(args.theme),
       mood: args.mood,
       artStyle: args.artStyle,
-      authorName: args.authorName,
-      characters: args.characters,
-      setting: args.setting,
+      authorName: args.authorName ? sanitizeForPrompt(args.authorName) : undefined,
+      characters: args.characters.map((c) => ({
+        name: sanitizeForPrompt(c.name),
+        role: c.role,
+        description: sanitizeForPrompt(c.description),
+        relationship: c.relationship ? sanitizeForPrompt(c.relationship) : undefined,
+      })),
+      setting: {
+        primary: sanitizeForPrompt(args.setting.primary),
+        timeOfDay: args.setting.timeOfDay,
+        season: args.setting.season,
+        additionalNotes: args.setting.additionalNotes
+          ? sanitizeForPrompt(args.setting.additionalNotes)
+          : undefined,
+      },
     };
 
-    return await generateStoryWithGemini(params, apiKey);
+    const result = await generateStoryWithGemini(params, apiKey);
+
+    // Moderate the generated content before returning
+    const generatedModerationResult = moderateGeneratedStory(result.pages);
+    if (!generatedModerationResult.isApproved) {
+      throw new Error(
+        `Generated content failed moderation: ${generatedModerationResult.message || "AI generated inappropriate content"}`
+      );
+    }
+
+    return result;
   },
 });
 
@@ -89,6 +135,14 @@ export const generateImage = action({
     height: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    // Check for prompt injection
+    const injectionCheck = detectPromptInjection(args.prompt);
+    if (injectionCheck.detected) {
+      throw new Error(
+        "Image prompt contains potentially harmful instructions and cannot be processed"
+      );
+    }
+
     // Content moderation check for image prompt
     const promptCheck = quickModerationCheck(args.prompt);
     if (!promptCheck.isClean) {
@@ -99,6 +153,13 @@ export const generateImage = action({
 
     // Also check character descriptions
     for (const char of args.characters) {
+      const charInjectionCheck = detectPromptInjection(char.description);
+      if (charInjectionCheck.detected) {
+        throw new Error(
+          "Character description contains potentially harmful instructions"
+        );
+      }
+
       const charCheck = quickModerationCheck(char.description);
       if (!charCheck.isClean) {
         throw new Error(
@@ -112,17 +173,16 @@ export const generateImage = action({
       throw new Error("NANO_BANANA_API_KEY environment variable is not set");
     }
 
-    const characters: CharacterReference[] = args.characters.map(
-      (c: { name: string; description: string; stylePrompt?: string }) => ({
-        name: c.name,
-        description: c.description,
-        stylePrompt: c.stylePrompt,
-      })
-    );
+    // Sanitize inputs
+    const characters: CharacterReference[] = args.characters.map((c) => ({
+      name: sanitizeForPrompt(c.name),
+      description: sanitizeForPrompt(c.description),
+      stylePrompt: c.stylePrompt ? sanitizeForPrompt(c.stylePrompt) : undefined,
+    }));
 
     const result = await generateImageWithNanoBanana(
       {
-        prompt: args.prompt,
+        prompt: sanitizeForPrompt(args.prompt),
         style: args.style,
         characters,
         dimensions: {
@@ -160,6 +220,17 @@ export const generateBookCover = action({
     authorName: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    // Check for prompt injection
+    const inputs = [args.prompt, args.title, args.authorName || ""];
+    for (const input of inputs) {
+      const injectionCheck = detectPromptInjection(input);
+      if (injectionCheck.detected) {
+        throw new Error(
+          "Input contains potentially harmful instructions and cannot be processed"
+        );
+      }
+    }
+
     // Content moderation check for cover prompt
     const promptCheck = quickModerationCheck(args.prompt);
     if (!promptCheck.isClean) {
@@ -181,10 +252,10 @@ export const generateBookCover = action({
     }
 
     const result = await generateCoverImage(
-      args.prompt,
+      sanitizeForPrompt(args.prompt),
       args.style,
-      args.title,
-      args.authorName,
+      sanitizeForPrompt(args.title),
+      args.authorName ? sanitizeForPrompt(args.authorName) : undefined,
       apiKey
     );
 
@@ -213,6 +284,22 @@ export const analyzeCharacterImage = action({
     description: v.string(),
   },
   handler: async (ctx, args) => {
+    // Check for prompt injection in description
+    const injectionCheck = detectPromptInjection(args.description);
+    if (injectionCheck.detected) {
+      throw new Error(
+        "Description contains potentially harmful instructions"
+      );
+    }
+
+    // Content moderation check
+    const descCheck = quickModerationCheck(args.description);
+    if (!descCheck.isClean) {
+      throw new Error(
+        `Description moderation failed: ${descCheck.reason || "Content contains inappropriate material"}`
+      );
+    }
+
     const apiKey = process.env.NANO_BANANA_API_KEY;
     if (!apiKey) {
       throw new Error("NANO_BANANA_API_KEY environment variable is not set");
@@ -227,7 +314,7 @@ export const analyzeCharacterImage = action({
 
     const stylePrompt = await extractCharacterStyle(
       imageBuffer,
-      args.description,
+      sanitizeForPrompt(args.description),
       apiKey
     );
 

@@ -15,7 +15,7 @@ export const currentUser = query({
     // Get the user from our users table
     const user = await ctx.db
       .query("users")
-      .withIndex("by_email", (q: any) => q.eq("email", identity.email))
+      .withIndex("by_email", (q) => q.eq("email", identity.email))
       .first();
 
     return user;

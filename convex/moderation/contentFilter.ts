@@ -2,11 +2,10 @@
  * Content Moderation Module
  *
  * Provides safety measures for AI-generated content in a children's book platform.
- * Implements keyword blocking, pattern detection, and content flagging.
+ * Implements keyword blocking, pattern detection, content flagging, and prompt injection detection.
  */
 
 // Inappropriate keywords/patterns to block (case-insensitive)
-// This is a basic list - in production, use a comprehensive moderation API
 const BLOCKED_KEYWORDS = [
   // Violence
   "kill",
@@ -78,7 +77,6 @@ const BLOCKED_KEYWORDS = [
   "damn",
   "hell",
   "crap",
-  // Additional profanity would be filtered
 ];
 
 // Patterns that suggest inappropriate content
@@ -87,6 +85,40 @@ const SUSPICIOUS_PATTERNS = [
   /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/, // Email addresses
   /\bhttps?:\/\/\S+/i, // URLs
   /\b(?:password|credit.?card|ssn|social.?security)\b/i, // Sensitive info
+];
+
+// Prompt injection detection patterns
+const PROMPT_INJECTION_PATTERNS = [
+  // Direct instruction attempts
+  /ignore\s+(previous|above|all|the)\s+(instructions?|prompt|rules?)/i,
+  /disregard\s+(previous|above|all|the)\s+(instructions?|prompt|rules?)/i,
+  /forget\s+(previous|above|all|the)\s+(instructions?|prompt|rules?)/i,
+  /override\s+(previous|above|all|the)\s+(instructions?|prompt|rules?)/i,
+
+  // System prompt manipulation
+  /\bsystem\s*:?\s*you\s+(are|will|must|should)/i,
+  /\bassistant\s*:?\s*you\s+(are|will|must|should)/i,
+  /\buser\s*:?\s*you\s+(are|will|must|should)/i,
+  /\brole\s*:?\s*(system|assistant|user)/i,
+
+  // Jailbreak attempts
+  /\bDAN\s*mode\b/i,
+  /\bjailbreak\b/i,
+  /\bbypass\s+(safety|filter|moderation)/i,
+  /\bdeveloper\s*mode\b/i,
+
+  // Role-play manipulation
+  /pretend\s+(you\s+are|to\s+be)\s+(a|an)\s+(different|new|unrestricted)/i,
+  /act\s+as\s+(if|though)\s+you\s+(have|had)\s+no\s+(restrictions?|limits?)/i,
+
+  // Output manipulation
+  /\bprint\s+(the|your)\s+(system|initial|original)\s+prompt/i,
+  /\bshow\s+me\s+(your|the)\s+(system|initial|original)\s+(prompt|instructions?)/i,
+  /\brepeat\s+(the|your)\s+(system|initial|original)\s+(prompt|instructions?)/i,
+
+  // Special character injection
+  /[<>{}[\]]{3,}/, // Multiple special characters in a row
+  /\\n\\n|\\r\\n\\r\\n/, // Newline injection attempts
 ];
 
 // Safe themes for children's books
@@ -177,6 +209,48 @@ function checkSuspiciousPatterns(text: string): string[] {
 }
 
 /**
+ * Check for prompt injection attempts
+ */
+export function detectPromptInjection(text: string): {
+  detected: boolean;
+  patterns: string[];
+} {
+  const detectedPatterns: string[] = [];
+
+  for (const pattern of PROMPT_INJECTION_PATTERNS) {
+    if (pattern.test(text)) {
+      detectedPatterns.push(pattern.source);
+    }
+  }
+
+  return {
+    detected: detectedPatterns.length > 0,
+    patterns: detectedPatterns,
+  };
+}
+
+/**
+ * Sanitize user input to prevent prompt injection
+ */
+export function sanitizeForPrompt(input: string): string {
+  // Remove or escape potentially dangerous characters
+  let sanitized = input
+    // Remove newlines that could be used to inject new prompts
+    .replace(/[\r\n]+/g, " ")
+    // Remove excessive whitespace
+    .replace(/\s{2,}/g, " ")
+    // Remove special characters used in prompt formatting
+    .replace(/[<>{}[\]|\\]/g, "")
+    // Remove colon sequences that might look like role prefixes
+    .replace(/:\s*:/g, "")
+    // Limit length to prevent extremely long inputs
+    .slice(0, 500)
+    .trim();
+
+  return sanitized;
+}
+
+/**
  * Validate theme is appropriate for children's content
  */
 export function validateTheme(theme: string): boolean {
@@ -219,11 +293,18 @@ export function moderateContent(content: ContentToModerate): ModerationResult {
     const patternsFound = checkSuspiciousPatterns(text);
     if (patternsFound.length > 0) {
       flaggedItems.push(
-        ...patternsFound.map((p) => `Suspicious pattern detected`)
+        ...patternsFound.map(() => `Suspicious pattern detected`)
       );
       if (severity === "none") {
         severity = "low";
       }
+    }
+
+    // Check for prompt injection
+    const injectionCheck = detectPromptInjection(text);
+    if (injectionCheck.detected) {
+      flaggedItems.push("Potential prompt injection detected");
+      severity = "high";
     }
   }
 
@@ -237,7 +318,7 @@ export function moderateContent(content: ContentToModerate): ModerationResult {
 
   // Determine if content is approved
   const isApproved = severity === "none" || severity === "low";
-  const requiresReview = severity === "medium" || flaggedItems.length > 3;
+  const requiresReview = ["medium", "high"].includes(severity) || flaggedItems.length > 3;
 
   return {
     isApproved,
@@ -274,12 +355,58 @@ export function quickModerationCheck(text: string): {
     };
   }
 
+  const injectionCheck = detectPromptInjection(text);
+  if (injectionCheck.detected) {
+    return {
+      isClean: false,
+      reason: "Content contains potentially harmful instructions",
+    };
+  }
+
   return { isClean: true };
 }
 
 /**
+ * Moderate AI-generated story content
+ */
+export function moderateGeneratedStory(pages: Array<{
+  textContent: string;
+  imagePrompt: string;
+}>): ModerationResult {
+  const flaggedItems: string[] = [];
+  let severity: ModerationResult["severity"] = "none";
+
+  for (let i = 0; i < pages.length; i++) {
+    const page = pages[i];
+
+    // Check story text
+    const textCheck = quickModerationCheck(page.textContent);
+    if (!textCheck.isClean) {
+      flaggedItems.push(`Page ${i + 1} text: ${textCheck.reason}`);
+      severity = "high";
+    }
+
+    // Check image prompt
+    const promptCheck = quickModerationCheck(page.imagePrompt);
+    if (!promptCheck.isClean) {
+      flaggedItems.push(`Page ${i + 1} image: ${promptCheck.reason}`);
+      severity = "high";
+    }
+  }
+
+  return {
+    isApproved: ["none", "low"].includes(severity),
+    flaggedItems,
+    severity,
+    requiresReview: flaggedItems.length > 0,
+    message: flaggedItems.length > 0
+      ? `Generated content flagged: ${flaggedItems[0]}`
+      : undefined,
+  };
+}
+
+/**
  * Sanitize text by removing blocked content
- * (Use with caution - may alter meaning)
  */
 export function sanitizeText(text: string): string {
   let sanitized = text;

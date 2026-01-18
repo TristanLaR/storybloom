@@ -1,10 +1,21 @@
 import { query, internalQuery } from "../_generated/server";
 import { v } from "convex/values";
+import { getOptionalAuthenticatedUser } from "../lib/authHelpers";
 
 export const getOrder = query({
   args: { orderId: v.id("orders") },
   handler: async (ctx, args) => {
-    return await ctx.db.get(args.orderId);
+    const user = await getOptionalAuthenticatedUser(ctx);
+    const order = await ctx.db.get(args.orderId);
+
+    if (!order) return null;
+
+    // Only return the order if the user owns it
+    if (!user || order.userId !== user._id) {
+      return null;
+    }
+
+    return order;
   },
 });
 
@@ -16,11 +27,16 @@ export const getOrderInternal = internalQuery({
 });
 
 export const getUserOrders = query({
-  args: { userId: v.id("users") },
-  handler: async (ctx, args) => {
+  args: {},
+  handler: async (ctx) => {
+    const user = await getOptionalAuthenticatedUser(ctx);
+    if (!user) {
+      return [];
+    }
+
     return await ctx.db
       .query("orders")
-      .withIndex("by_user", (q: any) => q.eq("userId", args.userId))
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
       .order("desc")
       .collect();
   },
@@ -29,9 +45,20 @@ export const getUserOrders = query({
 export const getBookOrders = query({
   args: { bookId: v.id("books") },
   handler: async (ctx, args) => {
+    const user = await getOptionalAuthenticatedUser(ctx);
+    if (!user) {
+      return [];
+    }
+
+    // First verify the user owns the book
+    const book = await ctx.db.get(args.bookId);
+    if (!book || book.userId !== user._id) {
+      return [];
+    }
+
     return await ctx.db
       .query("orders")
-      .withIndex("by_book", (q: any) => q.eq("bookId", args.bookId))
+      .withIndex("by_book", (q) => q.eq("bookId", args.bookId))
       .order("desc")
       .collect();
   },
@@ -42,7 +69,7 @@ export const getOrderByLuluId = internalQuery({
   handler: async (ctx, args) => {
     return await ctx.db
       .query("orders")
-      .withIndex("by_lulu_order", (q: any) => q.eq("luluOrderId", args.luluOrderId))
+      .withIndex("by_lulu_order", (q) => q.eq("luluOrderId", args.luluOrderId))
       .collect();
   },
 });

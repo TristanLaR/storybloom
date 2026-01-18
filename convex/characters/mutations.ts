@@ -1,5 +1,10 @@
 import { mutation } from "../_generated/server";
 import { v } from "convex/values";
+import {
+  getAuthenticatedUser,
+  verifyBookOwnership,
+  verifyCharacterOwnership,
+} from "../lib/authHelpers";
 
 export const createCharacter = mutation({
   args: {
@@ -12,6 +17,9 @@ export const createCharacter = mutation({
     order: v.number(),
   },
   handler: async (ctx, args) => {
+    const user = await getAuthenticatedUser(ctx);
+    await verifyBookOwnership(ctx, args.bookId, user);
+
     return await ctx.db.insert("characters", {
       ...args,
       createdAt: Date.now(),
@@ -33,6 +41,9 @@ export const createCharactersBulk = mutation({
     ),
   },
   handler: async (ctx, args) => {
+    const user = await getAuthenticatedUser(ctx);
+    await verifyBookOwnership(ctx, args.bookId, user);
+
     const characterIds = [];
     const now = Date.now();
 
@@ -65,6 +76,9 @@ export const updateCharacter = mutation({
     referenceImageId: v.optional(v.id("_storage")),
   },
   handler: async (ctx, args) => {
+    const user = await getAuthenticatedUser(ctx);
+    await verifyCharacterOwnership(ctx, args.characterId, user);
+
     const { characterId, ...updates } = args;
     const filteredUpdates = Object.fromEntries(
       Object.entries(updates).filter(([, value]) => value !== undefined)
@@ -77,6 +91,9 @@ export const updateCharacter = mutation({
 export const deleteCharacter = mutation({
   args: { characterId: v.id("characters") },
   handler: async (ctx, args) => {
+    const user = await getAuthenticatedUser(ctx);
+    await verifyCharacterOwnership(ctx, args.characterId, user);
+
     await ctx.db.delete(args.characterId);
   },
 });

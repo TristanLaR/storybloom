@@ -1,5 +1,10 @@
 import { internalMutation, mutation } from "../_generated/server";
 import { v } from "convex/values";
+import {
+  getAuthenticatedUser,
+  verifyBookOwnership,
+  verifyPageOwnership,
+} from "../lib/authHelpers";
 
 export const createPage = internalMutation({
   args: {
@@ -81,6 +86,9 @@ export const updatePageText = mutation({
     ),
   },
   handler: async (ctx, args) => {
+    const user = await getAuthenticatedUser(ctx);
+    await verifyPageOwnership(ctx, args.pageId, user);
+
     const updates: Record<string, unknown> = {
       textContent: args.textContent,
       updatedAt: Date.now(),
@@ -97,6 +105,9 @@ export const updatePageText = mutation({
 export const deletePage = mutation({
   args: { pageId: v.id("pages") },
   handler: async (ctx, args) => {
+    const user = await getAuthenticatedUser(ctx);
+    await verifyPageOwnership(ctx, args.pageId, user);
+
     await ctx.db.delete(args.pageId);
   },
 });
@@ -107,9 +118,12 @@ export const reorderPages = mutation({
     pageIds: v.array(v.id("pages")),
   },
   handler: async (ctx, args) => {
+    const user = await getAuthenticatedUser(ctx);
+    await verifyBookOwnership(ctx, args.bookId, user);
+
     // Validate that all pages belong to this book
     const pages = await Promise.all(
-      args.pageIds.map((pageId: typeof args.pageIds[number]) => ctx.db.get(pageId))
+      args.pageIds.map((pageId) => ctx.db.get(pageId))
     );
 
     for (const page of pages) {
@@ -121,7 +135,7 @@ export const reorderPages = mutation({
     // Update page numbers in the new order
     const now = Date.now();
     await Promise.all(
-      args.pageIds.map((pageId: typeof args.pageIds[number], index: number) =>
+      args.pageIds.map((pageId, index) =>
         ctx.db.patch(pageId, {
           pageNumber: index + 1,
           updatedAt: now,
