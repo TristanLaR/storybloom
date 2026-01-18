@@ -18,6 +18,14 @@ import {
   detectPromptInjection,
   type ContentToModerate,
 } from "../moderation/contentFilter";
+import type { CharacterInput } from "../types";
+
+// Type for image generation character input
+interface ImageGenCharacter {
+  name: string;
+  description: string;
+  stylePrompt?: string;
+}
 
 export const generateStory = action({
   args: {
@@ -48,9 +56,9 @@ export const generateStory = action({
       args.theme,
       args.setting.primary,
       args.setting.additionalNotes || "",
-      ...args.characters.map((c) => c.name),
-      ...args.characters.map((c) => c.description),
-      ...args.characters.map((c) => c.relationship || ""),
+      ...args.characters.map((c: CharacterInput) => c.name),
+      ...args.characters.map((c: CharacterInput) => c.description),
+      ...args.characters.map((c: CharacterInput) => c.relationship || ""),
     ];
 
     for (const input of allInputs) {
@@ -67,8 +75,8 @@ export const generateStory = action({
       title: args.title,
       theme: args.theme,
       settingDescription: args.setting.primary,
-      characterNames: args.characters.map((c) => c.name),
-      characterDescriptions: args.characters.map((c) => c.description),
+      characterNames: args.characters.map((c: CharacterInput) => c.name),
+      characterDescriptions: args.characters.map((c: CharacterInput) => c.description),
     };
 
     const moderationResult = moderateContent(contentToModerate);
@@ -90,7 +98,7 @@ export const generateStory = action({
       mood: args.mood,
       artStyle: args.artStyle,
       authorName: args.authorName ? sanitizeForPrompt(args.authorName) : undefined,
-      characters: args.characters.map((c) => ({
+      characters: args.characters.map((c: CharacterInput) => ({
         name: sanitizeForPrompt(c.name),
         role: c.role,
         description: sanitizeForPrompt(c.description),
@@ -174,7 +182,7 @@ export const generateImage = action({
     }
 
     // Sanitize inputs
-    const characters: CharacterReference[] = args.characters.map((c) => ({
+    const characters: CharacterReference[] = args.characters.map((c: ImageGenCharacter) => ({
       name: sanitizeForPrompt(c.name),
       description: sanitizeForPrompt(c.description),
       stylePrompt: c.stylePrompt ? sanitizeForPrompt(c.stylePrompt) : undefined,
